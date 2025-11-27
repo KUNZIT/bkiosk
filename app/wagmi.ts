@@ -4,8 +4,16 @@ import { defaultWagmiConfig } from '@web3modal/wagmi/config';
 import { sepolia } from 'wagmi/chains';
 import { reconnect } from '@wagmi/core';
 
-// 1. Get WalletConnect Project ID from your cloud account
-export const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // <<< REPLACE THIS WITH YOUR ACTUAL ID
+// 1. Get WalletConnect Project ID from Environment Variable
+// We use a fallback value (a safe empty string or known default) if the variable isn't found.
+export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_ID || ''; 
+
+// Error check: If running in the browser and the ID is missing, throw an error
+if (typeof window !== 'undefined' && !projectId) {
+  throw new Error('WalletConnect Project ID is missing. Set NEXT_PUBLIC_WALLETCONNECT_ID environment variable.');
+}
+
+
 
 // 2. Define our chain
 const chains = [sepolia] as const;
