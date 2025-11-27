@@ -163,7 +163,7 @@ export default function App() {
 
   // --- HELPER FOR QR (Modified for Native ETH) ---
   // Format: ethereum:MERCHANT_ADDRESS?value=0.001
-  const qrData = `ethereum:${CONFIG.MERCHANT_ADDRESS}?value=${CONFIG.REQUIRED_AMOUNT}`;
+  const qrData = `ethereum:${CONFIG.MERCHANT_ADDRESS}?value=${CONFIG.REQUIRED_AMOUNT}&chainId=11155111`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
 
   // --- RENDER HELPERS ---
