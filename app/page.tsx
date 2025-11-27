@@ -7,7 +7,7 @@ import { Contract, BigNumberish, Log, AddressLike } from 'ethers';
 
 const CONFIG = {
   // Your receiving wallet address
-  MERCHANT_ADDRESS: "0x1234567890123456789012345678901234567890", 
+  MERCHANT_ADDRESS: "0x35321cc55704948ee8c79f3c03cd0fcb055a3ac0", 
   // USDT Contract Address (Ethereum Mainnet)
   USDT_CONTRACT_ADDRESS: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
   // RPC URL (Get a free key from Infura or Alchemy)
