@@ -1,10 +1,9 @@
+"use client";
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CreditCard, Zap, RefreshCw, Cpu, Activity, Lock } from 'lucide-react';
 
-/**
- * CONFIGURATION
- * Replace these with your actual values before deployment.
- */
+
 const CONFIG = {
   // Your receiving wallet address
   MERCHANT_ADDRESS: "0x1234567890123456789012345678901234567890", 
