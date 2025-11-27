@@ -1,17 +1,17 @@
+"use client";
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CreditCard, Zap, RefreshCw, Cpu, Activity, Lock } from 'lucide-react';
+import { Contract } from 'ethers';
 
-/**
- * CONFIGURATION
- * Replace these with your actual values before deployment.
- */
+
 const CONFIG = {
   // Your receiving wallet address
   MERCHANT_ADDRESS: "0x1234567890123456789012345678901234567890", 
   // USDT Contract Address (Ethereum Mainnet)
   USDT_CONTRACT_ADDRESS: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
   // RPC URL (Get a free key from Infura or Alchemy)
-  RPC_URL: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID",
+  RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || "",
   // Amount to verify (1 USDT = 1000000 units usually, checking for > 0 here)
   REQUIRED_AMOUNT: 1.0,
   // Inactivity timeout in milliseconds (e.g., 60 seconds)
@@ -36,8 +36,8 @@ export default function App() {
   const audioRef = useRef(null);
 
   // Inactivity Timer Logic
-  const timerRef = useRef(null);
-
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
   const resetInactivityTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
@@ -119,7 +119,7 @@ export default function App() {
   // --- BLOCKCHAIN LISTENER ---
   useEffect(() => {
     let provider;
-    let contract;
+    let contract: Contract;
     
     // Only start listening if we are in payment view and ethers is loaded
     if (view === 'payment' && ethersLoaded && (window as any).ethers) {
