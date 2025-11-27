@@ -170,7 +170,7 @@ export default function App() {
     };
   }, [view, ethersLoaded]);
 
-  const handlePaymentSuccess = (hash) => {
+  const handlePaymentSuccess = (hash: string) => {
     setTxHash(hash);
     setView('success');
     
