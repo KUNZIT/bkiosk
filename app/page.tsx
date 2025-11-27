@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CreditCard, Zap, RefreshCw, Cpu, Activity, Lock } from 'lucide-react';
+import { Contract } from 'ethers';
 
 
 const CONFIG = {
@@ -118,7 +119,7 @@ export default function App() {
   // --- BLOCKCHAIN LISTENER ---
   useEffect(() => {
     let provider;
-    let contract;
+    let contract: Contract;
     
     // Only start listening if we are in payment view and ethers is loaded
     if (view === 'payment' && ethersLoaded && (window as any).ethers) {
