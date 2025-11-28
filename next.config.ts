@@ -1,33 +1,34 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // 1. **CRITICAL FIX:** This explicitly sets an empty turbopack config
-  // to resolve the error "This build is using Turbopack, with a `webpack` config and no `turbopack` config."
+  // 1. **CRITICAL FIX:** In Next.js 16+, the 'turbopack' key is a top-level option.
+  // We include an empty object to satisfy the builder when a custom 'webpack' function is present.
+  turbopack: {}, 
+
+  // 2. We keep the 'experimental' block clean (only add other experimental flags if needed).
   experimental: {
-    // The workaround suggested by the Next.js log:
-    turbopack: {},
+    // Other experimental features would go here, but 'turbopack' is no longer here.
   },
 
-  // 2. Dependency Fix (for pino/thread-stream): 
+  // 3. Dependency Fix (for pino/thread-stream): 
   // This prevents the bundler from trying to analyze test files inside these modules.
   serverExternalPackages: ["pino", "pino-pretty", "thread-stream"],
 
-  // 3. Ignore TS errors due to React 19/library version conflicts.
+  // 4. Ignore TS errors due to React 19/library version conflicts.
   typescript: {
     ignoreBuildErrors: true,
   },
   
-  // 4. Webpack externals for Node modules:
-  // We keep this function because it contains the essential fixes for Web3 logging dependencies (pino).
+  // 5. Webpack externals for Node modules (needed for your libraries):
+  // This function remains crucial to fix the 'module not found' errors related to pino.
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // These modules must be externalized for the server build to prevent errors with pino/logging
       config.externals.push("pino-pretty", "lokijs", "encoding");
     }
     return config;
   },
   
-  // Note: The 'eslint' configuration block has been removed to comply with Next.js 16 warnings.
+  // Note: The 'eslint' configuration block is still removed to comply with Next.js 16 warnings.
 };
 
 export default nextConfig;
