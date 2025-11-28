@@ -3,7 +3,7 @@ import { defaultWagmiConfig } from '@web3modal/wagmi';
 
 import { sepolia } from 'wagmi/chains';
 import { reconnect } from '@wagmi/core';
-
+import { QueryClient } from '@tanstack/react-query';
 // 1. Get WalletConnect Project ID from Environment Variable
 // We use a fallback value (a safe empty string or known default) if the variable isn't found.
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_ID || ''; 
@@ -55,3 +55,4 @@ createWeb3Modal({
 reconnect(wagmiConfig);
 
 export { wagmiConfig as config };
+export const queryClient = new QueryClient();
