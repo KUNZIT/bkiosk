@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CreditCard, Zap, RefreshCw, Activity, Lock } from 'lucide-react';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
-import { useAccount, useSendTransaction, useWaitForTransaction } from 'wagmi';
+// FIX: Replace useWaitForTransaction with useWaitForTransactionReceipt (Wagmi V2 update)
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'; 
 import { parseEther } from 'viem';
 import { sepolia } from 'wagmi/chains';
 
@@ -38,7 +39,8 @@ export default function PaymentApp() {
     });
 
     // Wagmi hook to wait for transaction confirmation
-    const { isSuccess: isTxConfirmed } = useWaitForTransaction({
+    // FIX: Changed useWaitForTransaction to useWaitForTransactionReceipt
+    const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
         hash: sendTxData?.hash,
     });
 
