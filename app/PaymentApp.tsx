@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CreditCard, Zap, RefreshCw, Activity, Lock } from 'lucide-react';
-// We still keep useWeb3Modal for network switching, but use wagmi for the initial connection
+// We still keep useWeb3Modal for network switching
 import { useWeb3Modal } from '@web3modal/wagmi/react'; 
 import { 
   useAccount, 
   useSendTransaction, 
   useWaitForTransactionReceipt, 
-  useConnect // <--- NEW IMPORT
+  useConnect 
 } from 'wagmi'; 
 import { parseEther } from 'viem';
 import { sepolia } from 'wagmi/chains';
@@ -26,14 +26,17 @@ export default function PaymentApp() {
     const [status, setStatus] = useState('Idle');
     const [txHash, setTxHash] = useState('');
     
-    const audioRef = useRef(null);
-    const timerRef = useRef(null);
+    // NEW: State to prevent infinite connection loops
+    const [hasInitiatedConnection, setHasInitiatedConnection] = useState(false);
+    
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     // --- Wagmi Hooks ---
     const { open } = useWeb3Modal();
     const { address, isConnected, chainId } = useAccount();
     
-    // NEW: Get connectors and the connect function
+    // Get connectors and the connect function
     const { connect, connectors, error: connectError } = useConnect();
 
     // Convert ETH amount to Wei
@@ -41,7 +44,6 @@ export default function PaymentApp() {
 
     // Send Transaction Hook
     const { data: sendTxData, sendTransaction, isPending: isTxPending } = useSendTransaction({
-        // Note: 'to' and 'value' can be passed directly to the function call or here
         mutation: {
              onError: (error) => setStatus(`Tx Failed: ${error.message.slice(0, 20)}...`)
         }
@@ -61,6 +63,7 @@ export default function PaymentApp() {
             setView('landing');
             setStatus('Idle');
             setTxHash('');
+            setHasInitiatedConnection(false); // Reset connection attempt flag
         }, CONFIG.INACTIVITY_LIMIT);
     }, []);
 
@@ -70,7 +73,7 @@ export default function PaymentApp() {
         }
     }, []);
 
-    const handlePaymentSuccess = (hash) => {
+    const handlePaymentSuccess = (hash: string) => {
         setTxHash(hash);
         setView('success');
         playSuccessSound();
@@ -84,18 +87,27 @@ export default function PaymentApp() {
 
             // 1. Check Connection
             if (!isConnected) {
-                setStatus("Generating Secure QR Code...");
                 
-                // FIX: Instead of generic open(), find WalletConnect specific connector
-                const walletConnectConnector = connectors.find(c => c.id === 'walletConnect');
-                
-                if (walletConnectConnector) {
-                    // This forces the WalletConnect QR modal specifically
-                    connect({ connector: walletConnectConnector });
-                } else {
-                    // Fallback if WalletConnect connector not found
-                    console.warn("WalletConnect connector not found, using default modal");
-                    open(); 
+                // Only try to connect if we haven't tried yet AND connectors are loaded
+                if (!hasInitiatedConnection && connectors.length > 0) {
+                    setStatus("Generating Secure QR Code...");
+                    
+                    const walletConnectConnector = connectors.find(c => c.id === 'walletConnect');
+                    
+                    if (walletConnectConnector) {
+                        setHasInitiatedConnection(true); // Mark as initiated so we don't loop
+                        
+                        connect({ connector: walletConnectConnector }, {
+                            onError: (err) => {
+                                console.error("Auto-connect failed:", err);
+                                setStatus("Please click button below");
+                            }
+                        });
+                    } else {
+                        // Fallback if WalletConnect connector not found
+                        console.warn("WalletConnect connector not found");
+                        setHasInitiatedConnection(true);
+                    }
                 }
 
             } else if (chainId !== sepolia.id) {
@@ -105,12 +117,11 @@ export default function PaymentApp() {
                 setStatus(`Connected: ${address?.slice(0, 6)}...`);
                 
                 // 2. Wallet Connected and on Sepolia -> Send Transaction
-                // We check !sendTxData to ensure we don't spam the prompt
                 if (!sendTxData && !isTxPending && !txHash) {
                     setStatus("Please confirm on your phone...");
                     
                     sendTransaction({
-                        to: CONFIG.MERCHANT_ADDRESS,
+                        to: CONFIG.MERCHANT_ADDRESS as `0x${string}`,
                         value: amountWei,
                         chainId: sepolia.id
                     });
@@ -118,6 +129,9 @@ export default function PaymentApp() {
                     setStatus("Transaction pending...");
                 }
             }
+        } else {
+            // Reset the flag if we leave the payment view
+            setHasInitiatedConnection(false);
         }
     }, [
         view, 
@@ -128,11 +142,12 @@ export default function PaymentApp() {
         open, 
         resetInactivityTimer, 
         sendTransaction,
-        connect,      // Dep dependency
-        connectors,   // Dep dependency
-        isTxPending,  // Dep dependency
+        connect,
+        connectors,
+        isTxPending,
         txHash,
-        amountWei
+        amountWei,
+        hasInitiatedConnection // Added to dependency array
     ]);
 
     // --- Handle Confirmation ---
@@ -206,23 +221,33 @@ export default function PaymentApp() {
                         </div>
                         
                         <div className="h-52 flex flex-col items-center justify-center">
-                            {/* The specific logic in useEffect triggers the QR modal */}
+                            
                             {!isConnected ? (
-                                <div className="text-slate-600 font-medium mb-4 animate-pulse">
-                                    Loading QR Code...
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="text-slate-600 font-medium animate-pulse">
+                                        {status === 'Idle' ? 'Loading System...' : 'Generating QR Code...'}
+                                    </div>
+                                    
+                                    {/* FALLBACK BUTTON: Solves the "Stuck Loading" issue */}
+                                    <button 
+                                        onClick={() => open()}
+                                        className="text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                    >
+                                        Click here if QR doesn't appear
+                                    </button>
                                 </div>
                             ) : (
-                                <div className="text-emerald-500 font-bold text-xl">
+                                <div className="text-emerald-500 font-bold text-xl animate-fade-in">
                                     Wallet Connected!
                                 </div>
                             )}
                             
                             {isConnected && chainId === sepolia.id && !sendTxData && (
-                                <p className="text-emerald-600 font-semibold mt-2">Check your phone to confirm!</p>
+                                <p className="text-emerald-600 font-semibold mt-4">Check your phone to confirm!</p>
                             )}
                         </div>
 
-                        <p className="text-slate-600 font-medium mb-2">
+                        <p className="text-slate-600 font-medium mb-2 mt-4">
                             Awaiting: <span className="text-emerald-600 font-bold">{CONFIG.REQUIRED_AMOUNT} ETH</span>
                         </p>
                         
