@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers"; // 1. Import headers to read cookies
-import { cookieToInitialState } from "wagmi"; // 2. Helper to sync server/client state
-import { config } from "./wagmi"; // 3. Import your wagmi config
-import Web3Provider from "./context/Web3Provider"; // 4. Import the wrapper we created in Step 1
+import { headers } from "next/headers"; 
+import { cookieToInitialState } from "wagmi"; 
+import { config } from "./wagmi"; 
+import Web3Provider from "./context/Web3Provider"; 
 
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
@@ -16,15 +16,18 @@ export const metadata: Metadata = {
   description: "Secure Crypto Payment Kiosk",
 };
 
-export default function RootLayout({
+// 1. Add 'async' here
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // 5. Get the cookie from the headers to persist connection state
+  
+  // 2. Add 'await' here before headers()
+  const headersData = await headers(); 
   const initialState = cookieToInitialState(
     config,
-    headers().get("cookie")
+    headersData.get("cookie")
   );
 
   return (
@@ -32,7 +35,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* 6. Wrap children with the Provider, passing the initialState */}
         <Web3Provider initialState={initialState}>
           {children}
         </Web3Provider>
