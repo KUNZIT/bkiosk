@@ -10,7 +10,7 @@ import { sepolia } from 'wagmi/chains';
 const CONFIG = {
     // Ensure this address is lowercase for comparison logic
     MERCHANT_ADDRESS: "0x35321cc55704948ee8c79f3c03cd0fcb055a3ac0".toLowerCase(),
-    REQUIRED_AMOUNT: 0.001,
+    REQUIRED_AMOUNT: 0.0001,
     AUDIO_SRC: "/alert.wav",
     PAYMENT_TIMEOUT: 50, // Seconds for payment flow
     SUCCESS_TIMEOUT: 10, // Seconds for liquid animation
