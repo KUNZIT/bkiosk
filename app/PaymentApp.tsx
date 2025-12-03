@@ -377,7 +377,7 @@ export default function PaymentApp() {
         return () => clearTimeout(timeoutId);
     }, [view, successPhase, handleReset]);
 
-    // The Watcher Logic (Existing Code)
+    // The Watcher Logic (FIXED to check multiple blocks)
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
 
@@ -386,32 +386,51 @@ export default function PaymentApp() {
 
             try {
                 const currentBlock = await publicClient.getBlockNumber();
+                const requiredValue = parseEther(CONFIG.REQUIRED_AMOUNT.toString());
+                
+                // --- FIX: Check the last 10 blocks for the transaction ---
+                // We check backward from the latest block (maxBlock) to the startBlock, 
+                // but we limit the search depth to the last 10 blocks (minBlockToSearch) for performance.
+                
+                const maxBlock = currentBlock;
+                // Calculate 10 blocks back, or 0n if currentBlock is less than 10
+                const minBlockToSearch = currentBlock > 10n ? currentBlock - 10n : 0n;
+                // Ensure we don't start checking before the payment flow began (startBlock)
+                const searchStartBlock = minBlockToSearch > startBlock ? minBlockToSearch : startBlock;
 
-                if (currentBlock >= startBlock) {
+                for (let i = maxBlock; i >= searchStartBlock; i--) {
+                    // Safety check to ensure we don't accidentally go before the start block or 0
+                    if (i < startBlock) break;
+
                     const block = await publicClient.getBlock({
-                        blockNumber: currentBlock,
+                        blockNumber: i,
                         includeTransactions: true
                     });
 
-                    const requiredValue = parseEther(CONFIG.REQUIRED_AMOUNT.toString());
-
                     const foundTx = block.transactions.find((tx: any) => {
                         const isToMerchant = tx.to?.toLowerCase() === CONFIG.MERCHANT_ADDRESS;
-                        const isCorrectAmount = tx.value >= requiredValue;
+                        // Use >= to allow for slightly higher amounts, which is standard
+                        const isCorrectAmount = tx.value >= requiredValue; 
                         return isToMerchant && isCorrectAmount;
                     });
 
                     if (foundTx) {
+                        console.log(`[Web3 Watcher] Success: Transaction ${foundTx.hash} found in block ${i}`);
                         handlePaymentSuccess(foundTx.hash);
+                        // Exit the check function immediately after success
+                        return;
                     }
                 }
+                // --- END FIX ---
+
             } catch (error) {
-                console.error("Error polling blockchain:", error);
+                console.error("Error polling blockchain or fetching blocks:", error);
             }
         };
 
         if (view === 'payment') {
-            intervalId = setInterval(checkRecentBlocks, 3000);
+            // Poll every 3 seconds 
+            intervalId = setInterval(checkRecentBlocks, 3000); 
         }
 
         // Must include handlePaymentSuccess in dependency array as it is a callback used inside an effect
@@ -632,7 +651,7 @@ export default function PaymentApp() {
                 }
                 @keyframes fade-in-up {
                     from { opacity: 0; transform: translateY(20px); }
-                    to { opacity: 1; transform: translateY(0); }
+                    to { transform: translateY(0); }
                 }
                 @keyframes scale-in {
                     from { opacity: 0; transform: scale(0.9); }
