@@ -71,7 +71,7 @@ export default function PaymentApp() {
     const [successPhase, setSuccessPhase] = useState<'timer' | 'message'>('timer');
     const [timeLeft, setTimeLeft] = useState(CONFIG.PAYMENT_TIMEOUT);
     const [successTimeLeft, setSuccessTimeLeft] = useState(CONFIG.SUCCESS_TIMEOUT);
-    // startBlock is now initialized outside of the view dependency
+    // startBlock is now reset when leaving payment view
     const [startBlock, setStartBlock] = useState<bigint>(0n);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -98,7 +98,6 @@ export default function PaymentApp() {
         setSuccessPhase('timer');
         setTimeLeft(CONFIG.PAYMENT_TIMEOUT);
         setSuccessTimeLeft(CONFIG.SUCCESS_TIMEOUT);
-        // Note: We intentionally don't reset the Arduino connection here.
     }, []);
 
     const playSuccessSound = useCallback(() => {
@@ -323,7 +322,7 @@ export default function PaymentApp() {
     }, [isConnected, reader, disconnectFromArduino]);
 
 
-    // --- TIMER & WATCHER LOGIC (Existing Code) ---
+    // --- TIMER & WATCHER LOGIC ---
 
     // Timer Logic (Payment Flow)
     useEffect(() => {
@@ -378,42 +377,45 @@ export default function PaymentApp() {
         return () => clearTimeout(timeoutId);
     }, [view, successPhase, handleReset]);
 
-    // --- FIX: Initialize Start Block immediately on load ---
+    // --- FIX 1: Initialize Start Block when entering payment view (Reverting to working pattern) ---
     useEffect(() => {
-        if (publicClient && startBlock === 0n) {
+        if (view === 'payment' && publicClient) {
             publicClient.getBlockNumber().then(blockNum => {
                 setStartBlock(blockNum);
-                console.log(`[Web3] Initial Start Block set to: ${blockNum}`);
+                console.log(`[Web3] Payment Flow Start Block set to: ${blockNum}`);
             }).catch(e => {
-                console.error("Failed to fetch initial block number:", e);
+                console.error("Failed to fetch block number on payment start:", e);
                 setError("Failed to connect to blockchain RPC.");
             });
         }
-    }, [publicClient, startBlock]);
+        // Reset startBlock when leaving payment view (e.g., timeout or success reset)
+        if (view !== 'payment') {
+             setStartBlock(0n);
+        }
+    }, [view, publicClient]);
 
 
-    // The Watcher Logic (Uses the early-set startBlock)
+    // --- FIX 2: The Watcher Logic (Robust Multi-Block Check) ---
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
 
         const checkRecentBlocks = async () => {
-            // Only run if we are in payment view AND the startBlock has been initialized
+            // Only run if we are in payment view AND the startBlock has been successfully initialized
             if (view !== 'payment' || !publicClient || startBlock === 0n) return;
 
             try {
                 const currentBlock = await publicClient.getBlockNumber();
                 const requiredValue = parseEther(CONFIG.REQUIRED_AMOUNT.toString());
                 
-                // Check the last 10 blocks (or fewer, if near the start block)
-                const maxBlock = currentBlock;
-                const minBlockToSearch = currentBlock > 10n ? currentBlock - 10n : 0n;
-                // Search from the later of the recorded startBlock or the minimum block to check
+                // Set the maximum block to search back to (10 blocks)
+                const maxBlocksToSearch = 10n;
+                const minBlockToSearch = currentBlock > maxBlocksToSearch ? currentBlock - maxBlocksToSearch : 0n;
+
+                // The effective start block is the LATER of the payment start block or 10 blocks ago.
                 const searchStartBlock = minBlockToSearch > startBlock ? minBlockToSearch : startBlock;
 
-                for (let i = maxBlock; i >= searchStartBlock; i--) {
-                    // Stop searching if we go past the recorded start block
-                    if (i < startBlock) break;
-
+                for (let i = currentBlock; i >= searchStartBlock; i--) {
+                    // Check transactions starting from currentBlock down to searchStartBlock
                     const block = await publicClient.getBlock({
                         blockNumber: i,
                         includeTransactions: true
@@ -421,11 +423,9 @@ export default function PaymentApp() {
 
                     const foundTx = block.transactions.find((tx: any) => {
                         const isToMerchant = tx.to?.toLowerCase() === CONFIG.MERCHANT_ADDRESS;
-                        // Use >= to allow for slightly higher amounts, which is standard
                         const isCorrectAmount = tx.value >= requiredValue; 
                         
-                        // Also ensure the transaction has input data only if the merchant address is a contract 
-                        // (which is not the case here), and ensure it's a value transfer.
+                        // Ensure it's a simple ETH transfer (no contract interaction input data)
                         const isValueTransfer = !tx.input || tx.input === '0x';
 
                         return isToMerchant && isCorrectAmount && isValueTransfer;
