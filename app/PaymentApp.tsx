@@ -99,24 +99,49 @@ export default function PaymentApp() {
         setSuccessTimeLeft(CONFIG.SUCCESS_TIMEOUT);
     }, []);
 
-    const playSuccessSound = useCallback(() => {
-        if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.error("Audio playback failed:", error);
-                });
-            }
-        }
-    }, []);
+    // Helper to send the relay command
+    const operateRelay = useCallback(async () => {
+        // NOTE: This internal function is defined early so it can be used inside handlePaymentSuccess
+        await sendCommand(CONFIG.RELAY_COMMAND);
+    }, [sendCommand]);
+
 
     const handlePaymentSuccess = (hash: string) => {
         setTxHash(hash);
         setView('success');
         setSuccessPhase('timer'); 
-        playSuccessSound();
-        // Relay is triggered by the dedicated useEffect hook below.
+
+        // CRITICAL FIX: Trigger relay directly when audio starts to ensure lowest latency.
+        if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+            const playPromise = audioRef.current.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Audio started playing (or attempted to)
+                    if (isConnected) {
+                        console.log("Payment confirmed. Audio started. Triggering Arduino relay operation.");
+                        operateRelay();
+                    } else {
+                        console.warn("Payment confirmed, but Arduino is not connected. Relay command skipped.");
+                    }
+                }).catch(error => {
+                    // Audio playback failed (e.g., user interaction required)
+                    console.error("Audio playback failed:", error);
+                    // Still attempt relay operation if connected, but log the failure
+                    if (isConnected) {
+                        console.warn("Audio failed, immediately triggering Arduino relay operation.");
+                        operateRelay();
+                    }
+                });
+            } else {
+                // If playPromise is undefined (synchronous playback), trigger relay immediately
+                if (isConnected) {
+                    console.log("Payment confirmed. Sync audio started. Triggering Arduino relay operation.");
+                    operateRelay();
+                }
+            }
+        }
     };
 
     // --- ARDUINO/WEB SERIAL LOGIC ---
@@ -144,11 +169,6 @@ export default function PaymentApp() {
         },
         [port, writer, isConnected],
     );
-
-    const operateRelay = useCallback(async () => {
-        await sendCommand(CONFIG.RELAY_COMMAND);
-    }, [sendCommand]);
-
 
     const disconnectFromArduino = useCallback(async () => {
         if (port) {
@@ -313,25 +333,8 @@ export default function PaymentApp() {
         };
     }, [isConnected, reader, disconnectFromArduino]);
 
-    // 3. Isolated Arduino Relay Trigger
-    useEffect(() => {
-        // Trigger relay command ONLY when view switches to success AND we have a transaction hash
-        if (view === 'success' && txHash) {
-            if (isConnected) {
-                console.log("[Arduino Isolate] Payment successful. Triggering relay operation.");
-                // Delay the operation slightly to ensure the view transition/audio starts first
-                const timeout = setTimeout(() => {
-                    operateRelay();
-                }, 100); 
-                return () => clearTimeout(timeout);
-            } else {
-                console.warn("[Arduino Isolate] Payment successful, but Arduino is not connected. Relay command skipped.");
-            }
-        }
-    }, [view, txHash, isConnected, operateRelay]);
 
-
-    // --- TIMER & WATCHER LOGIC (Reverting to high-speed known working logic) ---
+    // --- TIMER & WATCHER LOGIC (Proven fast logic) ---
 
     // Timer Logic (Payment Flow)
     useEffect(() => {
