@@ -179,7 +179,6 @@ export default function PaymentApp() {
 
     // --- Component Rendering ---
 
-
 const CubeFaceContent = ({ setView }) => {
   // CONFIG mock for the button text
   const CONFIG = { REQUIRED_AMOUNT: 0.05 };
@@ -283,9 +282,6 @@ export default function App() {
     </div>
   );
 }
-
-
-
     
 
                 {/* VIEW: PAYMENT */}
