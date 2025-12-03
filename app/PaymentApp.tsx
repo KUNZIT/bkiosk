@@ -64,18 +64,27 @@ const CONFIG = {
     // Commands from Arduino (to trigger the app)
     BUTTON_TRIGGER_COMMAND: "BUTTON_4_PRESSED",
     RELAY_OFF_COMMAND: "RELAY_AUTO_OFF",
-
-    // FIX: Using a known, fast Sepolia RPC provider endpoint directly
-    FAST_SEPOLIA_RPC_URL: 'https://sepolia.public.blastapi.io', 
 };
 
+// --- FIX: Dynamic RPC URL loading ---
+// 1. Check for the Vercel/Next.js environment variable.
+// 2. Fall back to a reliable public RPC if the variable is not set (e.g., when testing in the Canvas).
+const FALLBACK_RPC_URL = 'https://rpc.sepolia.org'; // Another fast, public alternative
+const INFURA_RPC_URL = 
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_RPC_URL)
+    ? process.env.NEXT_PUBLIC_RPC_URL
+    : FALLBACK_RPC_URL;
+
+console.log(`[Web3 Config] Using RPC URL: ${INFURA_RPC_URL.substring(0, 40)}...`);
+
 // Create a fast, dedicated viem client instance for polling transactions
-// This bypasses the potentially slow client from usePublicClient()
+// This client will now use the high-speed Infura endpoint (if set in Vercel)
 const fastPublicClient: PublicClient = createPublicClient({
     chain: sepolia,
-    transport: http(CONFIG.FAST_SEPOLIA_RPC_URL),
+    transport: http(INFURA_RPC_URL),
     pollingInterval: 3000, // Ensure fast polling
 });
+// ------------------------------------
 
 
 export default function PaymentApp() {
@@ -102,7 +111,6 @@ export default function PaymentApp() {
 
     // Wagmi hooks (We keep this for context, but use fastPublicClient for the watcher)
     // NOTE: If you were to use `usePublicClient()` here, it would be the slow client.
-    // We rely on the globally defined `fastPublicClient` below.
     const paymentURI = `ethereum:${CONFIG.MERCHANT_ADDRESS}@${sepolia.id}?value=${parseEther(CONFIG.REQUIRED_AMOUNT.toString()).toString()}`;
 
     // --- UTILITY FUNCTIONS ---
@@ -411,7 +419,8 @@ export default function PaymentApp() {
                 console.log(`[Web3] Payment Flow Start Block set to: ${blockNum}`);
             }).catch(e => {
                 console.error("Failed to fetch block number on payment start:", e);
-                setError("Failed to connect to blockchain RPC. Check network status.");
+                // The connection error is likely because the RPC URL is slow or invalid.
+                setError(`Connection Error: Failed to connect to blockchain RPC. Check network status. Current URL fallback: ${INFURA_RPC_URL}`);
             });
         }
         // Reset startBlock when leaving payment view (e.g., timeout or success reset)
@@ -567,7 +576,7 @@ export default function PaymentApp() {
                         {error && (
                             <div className="mt-4 text-sm text-red-400 bg-red-900/50 p-3 rounded-lg flex items-center justify-center gap-2">
                                 <AlertCircle size={18} />
-                                <span>Connection Error: {error}</span>
+                                <span>{error}</span>
                             </div>
                         )}
                     </div>
