@@ -99,51 +99,6 @@ export default function PaymentApp() {
         setSuccessTimeLeft(CONFIG.SUCCESS_TIMEOUT);
     }, []);
 
-    // Helper to send the relay command
-    const operateRelay = useCallback(async () => {
-        // NOTE: This internal function is defined early so it can be used inside handlePaymentSuccess
-        await sendCommand(CONFIG.RELAY_COMMAND);
-    }, [sendCommand]);
-
-
-    const handlePaymentSuccess = (hash: string) => {
-        setTxHash(hash);
-        setView('success');
-        setSuccessPhase('timer'); 
-
-        // CRITICAL FIX: Trigger relay directly when audio starts to ensure lowest latency.
-        if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-            const playPromise = audioRef.current.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    // Audio started playing (or attempted to)
-                    if (isConnected) {
-                        console.log("Payment confirmed. Audio started. Triggering Arduino relay operation.");
-                        operateRelay();
-                    } else {
-                        console.warn("Payment confirmed, but Arduino is not connected. Relay command skipped.");
-                    }
-                }).catch(error => {
-                    // Audio playback failed (e.g., user interaction required)
-                    console.error("Audio playback failed:", error);
-                    // Still attempt relay operation if connected, but log the failure
-                    if (isConnected) {
-                        console.warn("Audio failed, immediately triggering Arduino relay operation.");
-                        operateRelay();
-                    }
-                });
-            } else {
-                // If playPromise is undefined (synchronous playback), trigger relay immediately
-                if (isConnected) {
-                    console.log("Payment confirmed. Sync audio started. Triggering Arduino relay operation.");
-                    operateRelay();
-                }
-            }
-        }
-    };
-
     // --- ARDUINO/WEB SERIAL LOGIC ---
 
     const sendCommand = useCallback(
@@ -169,6 +124,46 @@ export default function PaymentApp() {
         },
         [port, writer, isConnected],
     );
+    
+    // Helper to send the relay command (Simplified to use sendCommand directly)
+    // NOTE: This helper is only kept for clarity, though its use is minimal now.
+    const operateRelay = useCallback(async () => {
+        await sendCommand(CONFIG.RELAY_COMMAND);
+    }, [sendCommand]);
+
+
+    const handlePaymentSuccess = useCallback((hash: string) => { // Added useCallback here for consistency
+        setTxHash(hash);
+        setView('success');
+        setSuccessPhase('timer'); 
+
+        // CRITICAL FIX: Trigger relay directly when audio starts to ensure lowest latency.
+        if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+            const playPromise = audioRef.current.play();
+            
+            // Define the action to take after audio attempts to play
+            const relayAction = () => {
+                if (isConnected) {
+                    console.log("Payment confirmed. Triggering Arduino relay operation.");
+                    sendCommand(CONFIG.RELAY_COMMAND); // Directly call sendCommand
+                } else {
+                    console.warn("Payment confirmed, but Arduino is not connected. Relay command skipped.");
+                }
+            };
+
+            if (playPromise !== undefined) {
+                playPromise.then(relayAction).catch(error => {
+                    console.error("Audio playback failed:", error);
+                    // If audio fails to play (common without initial user interaction), still execute the relay action
+                    relayAction(); 
+                });
+            } else {
+                // Synchronous playback case
+                relayAction();
+            }
+        }
+    }, [isConnected, sendCommand]); // Dependency on sendCommand is correct
 
     const disconnectFromArduino = useCallback(async () => {
         if (port) {
