@@ -12,18 +12,18 @@ const geistSans = GeistSans;
 const geistMono = GeistMono;
 
 export const metadata: Metadata = {
-  title: "Future Pay",
+  title: "Sepolia Pay",
   description: "Secure Crypto Payment Kiosk",
 };
 
-// 1. Add 'async' here
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   
-  // 2. Add 'await' here before headers()
+  
   const headersData = await headers(); 
   const initialState = cookieToInitialState(
     config,
