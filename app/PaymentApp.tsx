@@ -454,9 +454,6 @@ export default function PaymentApp() {
     }, [view, publicClient, startBlock, handlePaymentSuccess]); 
 
     const isWebSerialSupported = typeof navigator !== "undefined" && "serial" in navigator;
-    
-    // Calculate percentage width for the countdown bar
-    const barWidthPercent = (timeLeft / CONFIG.PAYMENT_TIMEOUT) * 100;
 
     // --- Component Rendering ---
     return (
@@ -545,9 +542,10 @@ export default function PaymentApp() {
                         
                         {/* Display Serial Trigger Status */}
                         {isConnected && (
-                            <p className="text-sm text-emerald-400">
-                                OR: Press the physical button on the Arduino to start payment!
-                            </p>
+
+ <p className="text-sm text-emerald-400">
+                                
+                            </p>                        
                         )}
 
                         {error && (
@@ -563,18 +561,9 @@ export default function PaymentApp() {
                 {/* VIEW: PAYMENT */}
                 {view === 'payment' && (
                     <div className="bg-white p-8 rounded-3xl shadow-2xl shadow-emerald-500/10 max-w-sm w-full text-center animate-fade-in-up">
-                        <div className="mb-6 flex items-center text-slate-500">
-                            <span className="text-xs font-bold tracking-widest uppercase flex-shrink-0">Scan to Pay</span>
-                            
-                            {/* NEW: Decreasing Timer Bar */}
-                            <div className="flex-grow mx-3 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
-                                    style={{ width: `${barWidthPercent}%` }}
-                                ></div>
-                            </div>
-                            
-                            <span className={`text-xs font-mono px-2 py-1 rounded font-bold transition-colors flex-shrink-0 ${timeLeft <= 10 ? 'bg-red-100 text-red-600' : 'bg-slate-100'}`}>
+                        <div className="mb-6 flex justify-between items-center text-slate-500">
+                            <span className="text-xs font-bold tracking-widest uppercase">Scan to Pay</span>
+                            <span className={`text-xs font-mono px-2 py-1 rounded font-bold transition-colors ${timeLeft <= 10 ? 'bg-red-100 text-red-600' : 'bg-slate-100'}`}>
                                 Time left: {timeLeft}s
                             </span>
                         </div>
