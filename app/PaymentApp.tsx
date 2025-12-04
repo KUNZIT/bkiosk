@@ -527,7 +527,7 @@ export default function PaymentApp() {
                 {view === 'landing' && (
                     <div className="text-center space-y-8 animate-fade-in">
                         <h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">
-                            ETHEREUM Sepolia
+                            DRINKING WATER Dispenser
                         </h1>
 
                         <button
@@ -535,7 +535,7 @@ export default function PaymentApp() {
                             
                             className="group relative px-8 py-4 bg-black border border-emerald-500 hover:bg-emerald-900 text-emerald-500 rounded-xl font-bold text-xl transition-all transform hover:scale-105 active:scale-95"
                         >
-                            <span>Pay {CONFIG.REQUIRED_AMOUNT} ETH</span>
+                            <span>Pay {CONFIG.REQUIRED_AMOUNT} ETH Sepolia </span>
                         </button>
                         
                         {/* Display Serial Trigger Status */}
