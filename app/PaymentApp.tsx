@@ -542,9 +542,7 @@ export default function PaymentApp() {
                         
                         {/* Display Serial Trigger Status */}
                         {isConnected && (
-                            <p className="text-sm text-emerald-400">
-                                OR: Press the physical button on the Arduino to start payment!
-                            </p>
+                            
                         )}
 
                         {error && (
