@@ -85,7 +85,7 @@ export default function PaymentApp() {
     const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
     const [relayIsActive, setRelayIsActive] = useState(false); // Track state based on Arduino message
 
-    // Wagmi hooks (We rely on this being fast due to your Vercel config)
+    // Wagmi hooks 
     const publicClient = usePublicClient();
     const paymentURI = `ethereum:${CONFIG.MERCHANT_ADDRESS}@${sepolia.id}?value=${parseEther(CONFIG.REQUIRED_AMOUNT.toString()).toString()}`;
 
@@ -125,7 +125,7 @@ export default function PaymentApp() {
         [port, writer, isConnected],
     );
     
-    // Helper to send the relay command (Simplified to use sendCommand directly)
+    
     // NOTE: This helper is only kept for clarity, though its use is minimal now.
     const operateRelay = useCallback(async () => {
         await sendCommand(CONFIG.RELAY_COMMAND);
@@ -137,7 +137,7 @@ export default function PaymentApp() {
         setView('success');
         setSuccessPhase('timer'); 
 
-        // CRITICAL FIX: Trigger relay directly when audio starts to ensure lowest latency.
+        // Trigger relay directly when audio starts
         if (audioRef.current) {
             audioRef.current.currentTime = 0;
             const playPromise = audioRef.current.play();
@@ -277,7 +277,7 @@ export default function PaymentApp() {
         }
     }, [connectToArduino, autoConnectAttempted]);
 
-    // 2. Continuous Serial Data Reader (CRITICAL FIX APPLIED HERE)
+    // 2. Continuous Serial Data Reader
     useEffect(() => {
         let loop = true;
 
@@ -307,9 +307,7 @@ export default function PaymentApp() {
                         }
                     }
                     
-                    // CRITICAL FIX: Yield thread control back to the browser
-                    // This allows the browser to process RPC calls and UI updates, 
-                    // preventing the Web Serial loop from starving the main thread.
+                    
                     await new Promise(resolve => setTimeout(resolve, 1));
                 }
             } catch (error) {
@@ -463,7 +461,7 @@ export default function PaymentApp() {
 
             {/* ARDUINO CONNECTION STATUS & BUTTONS */}
             {isWebSerialSupported && (
-                // MODIFICATION: Add 'opacity-0 pointer-events-none' classes when isConnected is true to hide the panel
+                
                 <div 
                     className={`absolute top-4 right-4 z-10 flex flex-col items-end space-y-2 p-3 rounded-xl bg-slate-900/70 backdrop-blur-sm shadow-xl border border-slate-700 transition-opacity duration-300 ${isConnected ? 'opacity-0 pointer-events-none' : ''}`}
                 >
@@ -534,7 +532,7 @@ export default function PaymentApp() {
 
                         <button
                             onClick={() => setView('payment')}
-                            // MODIFICATION: Updated classes for black background, emerald-500 text, emerald-500 border, and no shadow.
+                            
                             className="group relative px-8 py-4 bg-black border border-emerald-500 hover:bg-emerald-900 text-emerald-500 rounded-xl font-bold text-xl transition-all transform hover:scale-105 active:scale-95"
                         >
                             <span>Pay {CONFIG.REQUIRED_AMOUNT} ETH</span>
