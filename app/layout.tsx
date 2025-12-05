@@ -12,7 +12,7 @@ const geistSans = GeistSans;
 const geistMono = GeistMono;
 
 export const metadata: Metadata = {
-  title: "Sepolia Pay",
+  title: "baseSepolia Pay",
   description: "Secure Crypto Payment Kiosk",
 };
 
