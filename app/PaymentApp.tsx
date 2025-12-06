@@ -8,7 +8,7 @@ import { parseUnits } from 'viem';
 import { baseSepolia } from 'wagmi/chains';
 
 // --- NEW IMPORTS ---
-import { mintReceiptNFT } from '@/utils/mintAction'; // Adjust path based on where you put the file
+import { mintReceiptNFT } from './utils/mintAction'; // Adjust path based on where you put the file
 
 // Define the SerialPort type globally for TypeScript compatibility
 declare global {
